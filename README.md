@@ -110,7 +110,7 @@ FlavorDash/
 
 ```bash
 # Clone repository
-git clone <repository-url>
+git clone https://github.com/Rizalibrah08/FlavorDash.git
 cd FlavorDash
 
 # Install dependencies mobile app
