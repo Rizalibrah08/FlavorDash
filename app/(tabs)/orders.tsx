@@ -25,12 +25,20 @@ export default function OrdersScreen() {
     fetch(`${BACKEND_URL}/orders`, {
       headers: { Authorization: `Bearer ${token}` },
     })
-      .then(res => {
-        if (!res.ok) throw new Error('Failed');
-        return res.json();
+      .then(async res => {
+        const text = await res.text();
+        console.log('Orders response:', res.status, text);
+        if (!res.ok) {
+          const data = JSON.parse(text);
+          throw new Error(data.message || 'Failed');
+        }
+        return JSON.parse(text);
       })
       .then(data => setOrders(Array.isArray(data) ? data : []))
-      .catch(() => setError('Gagal memuat pesanan. Pastikan backend berjalan.'))
+      .catch(err => {
+        console.log('Orders error:', err.message);
+        setError(`Gagal memuat pesanan: ${err.message}`);
+      })
       .finally(() => setLoading(false));
   }, [token]);
 
