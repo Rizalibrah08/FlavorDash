@@ -1,10 +1,13 @@
 const express = require('express');
 const jwt = require('jsonwebtoken');
 const cors = require('cors');
+const fs = require('fs');
+const path = require('path');
 
 const app = express();
 const SECRET = 'flavordash-secret-key-2024';
 const PORT = 3000;
+const ORDERS_FILE = path.join(__dirname, 'orders.json');
 
 app.use(cors());
 app.use(express.json());
@@ -119,6 +122,20 @@ const RESTAURANTS = [
 let ORDERS = [];
 let nextOrderId = 1;
 
+if (fs.existsSync(ORDERS_FILE)) {
+  try {
+    ORDERS = JSON.parse(fs.readFileSync(ORDERS_FILE, 'utf8'));
+    nextOrderId = ORDERS.length > 0 ? Math.max(...ORDERS.map(o => Number(o.id))) + 1 : 1;
+    console.log('Loaded', ORDERS.length, 'orders from file');
+  } catch (e) {
+    console.log('Error loading orders:', e.message);
+  }
+}
+
+function saveOrders() {
+  fs.writeFileSync(ORDERS_FILE, JSON.stringify(ORDERS, null, 2));
+}
+
 // POST /auth/login
 app.post('/auth/login', (req, res) => {
   const { username, password } = req.body;
@@ -226,8 +243,14 @@ app.post('/orders', authMiddleware, (req, res) => {
 
   console.log('New order:', order.id, 'for user:', userId);
   ORDERS.push(order);
+  saveOrders();
   console.log('Total orders:', ORDERS.length);
   res.status(201).json(order);
+});
+
+// GET /orders/debug - debug endpoint (hapus di production)
+app.get('/orders/debug', (req, res) => {
+  res.json({ total: ORDERS.length, orders: ORDERS.map(o => ({ id: o.id, userId: o.userId, status: o.status })) });
 });
 
 // GET /orders
@@ -258,6 +281,7 @@ app.patch('/orders/:id/status', authMiddleware, (req, res) => {
   }
 
   order.status = status;
+  saveOrders();
   res.json(order);
 });
 
