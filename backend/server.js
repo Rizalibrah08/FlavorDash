@@ -207,9 +207,10 @@ app.post('/orders', authMiddleware, (req, res) => {
     return res.status(400).json({ message: 'Items tidak boleh kosong' });
   }
 
+  const userId = Number(req.user.userId);
   const order = {
     id: String(nextOrderId++),
-    userId: req.user.userId,
+    userId: userId,
     items,
     status: 'pending',
     restaurantId,
@@ -223,13 +224,18 @@ app.post('/orders', authMiddleware, (req, res) => {
     createdAt: new Date().toISOString(),
   };
 
+  console.log('New order:', order.id, 'for user:', userId);
   ORDERS.push(order);
+  console.log('Total orders:', ORDERS.length);
   res.status(201).json(order);
 });
 
 // GET /orders
 app.get('/orders', authMiddleware, (req, res) => {
-  const userOrders = ORDERS.filter(o => o.userId === req.user.userId);
+  const userId = Number(req.user.userId);
+  console.log('GET /orders for user:', userId, 'total orders:', ORDERS.length);
+  const userOrders = ORDERS.filter(o => Number(o.userId) === userId);
+  console.log('Found orders:', userOrders.length);
   res.json(userOrders);
 });
 

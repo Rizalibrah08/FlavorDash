@@ -16,8 +16,9 @@ export default function OrdersScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [activeTab, setActiveTab] = useState('all');
+  const [refreshing, setRefreshing] = useState(false);
 
-  useEffect(() => {
+  const fetchOrders = () => {
     if (!token) {
       setLoading(false);
       return;
@@ -39,8 +40,21 @@ export default function OrdersScreen() {
         console.log('Orders error:', err.message);
         setError(`Gagal memuat pesanan: ${err.message}`);
       })
-      .finally(() => setLoading(false));
+      .finally(() => {
+        setLoading(false);
+        setRefreshing(false);
+      });
+  };
+
+  useEffect(() => {
+    fetchOrders();
   }, [token]);
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    setError('');
+    fetchOrders();
+  };
 
   if (loading) return <View style={styles.center}><ActivityIndicator size="large" color="#2563eb" /></View>;
   if (error) return <View style={styles.center}><Text style={{ color: '#dc2626' }}>{error}</Text></View>;
@@ -82,6 +96,8 @@ export default function OrdersScreen() {
         keyExtractor={item => item.id}
         contentContainerStyle={styles.list}
         showsVerticalScrollIndicator={false}
+        refreshing={refreshing}
+        onRefresh={onRefresh}
         ListEmptyComponent={
           <View style={styles.empty}>
             <Text style={styles.emptyIcon}>📋</Text>
