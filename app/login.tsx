@@ -31,7 +31,7 @@ export default function LoginScreen() {
       <View style={styles.circle3} />
 
       {/* Back Button */}
-      <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
+      <TouchableOpacity style={styles.backBtn} onPress={() => router.replace('/(tabs)')}>
         <Text style={styles.backBtnText}>← Kembali</Text>
       </TouchableOpacity>
 
