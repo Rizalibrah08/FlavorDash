@@ -5,6 +5,7 @@ import { ActivityIndicator, View } from 'react-native';
 import 'react-native-reanimated';
 
 import { AuthProvider, useAuth } from '@/context/auth-context';
+import { CartProvider } from '@/context/cart-context';
 
 function RootLayoutNav() {
   const { token, isLoading } = useAuth();
@@ -17,7 +18,9 @@ function RootLayoutNav() {
     const inLogin = segments[0] === 'login';
     const isProtectedRoute = segments.includes('restaurant-detail') || 
                              segments.includes('orders') || 
-                             segments.includes('order-detail');
+                             segments.includes('order-detail') ||
+                             segments.includes('cart') ||
+                             segments.includes('checkout');
 
     if (!token && isProtectedRoute) {
       router.replace('/login');
@@ -41,6 +44,8 @@ function RootLayoutNav() {
         <Stack.Screen name="login" options={{ headerShown: false }} />
         <Stack.Screen name="restaurant-detail" options={{ headerShown: false }} />
         <Stack.Screen name="order-detail" options={{ headerShown: false }} />
+        <Stack.Screen name="cart" options={{ headerShown: false }} />
+        <Stack.Screen name="checkout" options={{ headerShown: false }} />
       </Stack>
       <StatusBar style="auto" />
     </>
@@ -50,7 +55,9 @@ function RootLayoutNav() {
 export default function RootLayout() {
   return (
     <AuthProvider>
-      <RootLayoutNav />
+      <CartProvider>
+        <RootLayoutNav />
+      </CartProvider>
     </AuthProvider>
   );
 }
