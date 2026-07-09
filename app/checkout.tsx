@@ -31,6 +31,10 @@ export default function CheckoutScreen() {
 
     try {
       const authToken = token || await SecureStore.getItemAsync('token');
+      console.log('Checkout: token exists:', !!authToken);
+      console.log('Checkout: items count:', items.length);
+      console.log('Checkout: restaurantId:', restaurantId);
+
       const res = await axios.post(`${BACKEND_URL}/orders`, {
         items: items.map(i => ({ id: i.id, name: i.name, price: i.price, quantity: i.quantity })),
         restaurantId,
@@ -45,13 +49,15 @@ export default function CheckoutScreen() {
         headers: { Authorization: `Bearer ${authToken}` },
       });
 
+      console.log('Checkout: order created:', res.data.id);
       clearCart();
       router.replace({
         pathname: '/order-detail',
         params: { id: res.data.id },
       });
-    } catch (err) {
-      Alert.alert('Gagal', 'Gagal membuat pesanan. Silakan coba lagi.');
+    } catch (err: any) {
+      console.log('Checkout error:', err?.response?.data || err.message);
+      Alert.alert('Gagal', `Gagal membuat pesanan: ${err?.response?.data?.message || err.message}`);
     } finally {
       setLoading(false);
     }
