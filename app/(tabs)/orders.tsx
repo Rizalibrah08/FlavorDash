@@ -18,13 +18,19 @@ export default function OrdersScreen() {
   const [activeTab, setActiveTab] = useState('all');
 
   useEffect(() => {
-    if (!token) return;
+    if (!token) {
+      setLoading(false);
+      return;
+    }
     fetch(`${BACKEND_URL}/orders`, {
       headers: { Authorization: `Bearer ${token}` },
     })
-      .then(res => res.json())
+      .then(res => {
+        if (!res.ok) throw new Error('Failed');
+        return res.json();
+      })
       .then(data => setOrders(Array.isArray(data) ? data : []))
-      .catch(() => setError('Gagal memuat pesanan'))
+      .catch(() => setError('Gagal memuat pesanan. Pastikan backend berjalan.'))
       .finally(() => setLoading(false));
   }, [token]);
 
