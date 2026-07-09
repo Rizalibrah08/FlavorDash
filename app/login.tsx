@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
+import { useRouter } from 'expo-router';
 import { useAuth } from '@/context/auth-context';
 
 export default function LoginScreen() {
   const { login } = useAuth();
+  const router = useRouter();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -27,6 +29,11 @@ export default function LoginScreen() {
       <View style={styles.circle1} />
       <View style={styles.circle2} />
       <View style={styles.circle3} />
+
+      {/* Back Button */}
+      <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
+        <Text style={styles.backBtnText}>← Kembali</Text>
+      </TouchableOpacity>
 
       <View style={styles.card}>
         <View style={styles.logoContainer}>
@@ -113,6 +120,17 @@ const styles = StyleSheet.create({
     top: '40%',
     left: -30,
   },
+  backBtn: {
+    position: 'absolute',
+    top: 50,
+    left: 20,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 10,
+    zIndex: 10,
+  },
+  backBtnText: { color: '#fff', fontWeight: '600', fontSize: 14 },
   card: {
     width: '100%',
     backgroundColor: '#fff',
