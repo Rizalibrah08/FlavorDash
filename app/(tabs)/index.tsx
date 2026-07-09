@@ -3,40 +3,61 @@ import {
   View, Text, FlatList, Image, StyleSheet, ActivityIndicator,
   TextInput, ScrollView, TouchableOpacity, StatusBar,
 } from 'react-native';
+import { useRouter } from 'expo-router';
+import { useAuth } from '@/context/auth-context';
 
-const API_URL = 'https://6a032dc50d92f63dd255159e.mockapi.io/foods';
+const BACKEND_URL = 'http://192.168.1.7:3000';
 
-type Food = {
+type Restaurant = {
   id: string;
   name: string;
-  description: string;
   imageUrl: string;
-  price: number;
+  rating: number;
+  distance: string;
+  category: string;
+  description: string;
+  address: string;
+  openingHours: string;
+  promotionalText: string;
 };
 
-const categories = ['🍔 Semua', '🍕 Pizza', '🍜 Mie', '🥤 Minuman', '🍰 Dessert'];
+const categories = ['Semua', 'Pizza', 'Mie', 'Minuman', 'Dessert', 'Ayam', 'Burger'];
 
 export default function CatalogScreen() {
-  const [foods, setFoods] = useState<Food[]>([]);
+  const router = useRouter();
+  const { token } = useAuth();
+  const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [activeCategory, setActiveCategory] = useState(0);
   const [search, setSearch] = useState('');
 
   useEffect(() => {
-    fetch(API_URL)
+    fetch(`${BACKEND_URL}/restaurants`)
       .then(res => res.json())
-      .then(data => setFoods(data))
+      .then(data => setRestaurants(Array.isArray(data) ? data : []))
       .catch(() => setError('Gagal memuat katalog'))
       .finally(() => setLoading(false));
   }, []);
 
-  const filtered = foods.filter(f =>
-    f.name?.toLowerCase().includes(search.toLowerCase())
-  );
+  const handleRestaurantPress = (restaurantId: string) => {
+    if (!token) {
+      router.push('/login');
+    } else {
+      router.push(`/restaurant-detail?id=${restaurantId}`);
+    }
+  };
 
   if (loading) return <View style={styles.center}><ActivityIndicator size="large" color="#2563eb" /></View>;
   if (error) return <View style={styles.center}><Text style={{ color: '#dc2626' }}>{error}</Text></View>;
+
+  const filtered = restaurants.filter(r => {
+    const matchesSearch = r.name?.toLowerCase().includes(search.toLowerCase()) ||
+                         r.description?.toLowerCase().includes(search.toLowerCase());
+    const matchesCategory = activeCategory === 0 || 
+                           r.category?.toLowerCase() === categories[activeCategory].toLowerCase();
+    return matchesSearch && matchesCategory;
+  });
 
   return (
     <View style={styles.container}>
@@ -44,23 +65,30 @@ export default function CatalogScreen() {
 
       <FlatList
         data={filtered}
+        key={'2-col'}
         keyExtractor={item => item.id}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 30 }}
+        numColumns={2}
+        columnWrapperStyle={{ paddingHorizontal: 20, justifyContent: 'space-between' }}
         ListHeaderComponent={
           <>
-            {/* Header */}
             <View style={styles.header}>
               <View>
-                <Text style={styles.greeting}>Delivery to</Text>
-                <Text style={styles.headerTitle}>Lokasi Saat Ini 📍</Text>
+                <Text style={styles.greeting}>Halo, {token ? 'Selamat datang!' : 'Selamat datang di'}</Text>
+                <Text style={styles.headerTitle}>FlavorDash 🍔</Text>
               </View>
-              <View style={styles.avatar}>
-                <Text style={styles.avatarText}>A</Text>
-              </View>
+              {!token ? (
+                <TouchableOpacity style={styles.loginBtn} onPress={() => router.push('/login')}>
+                  <Text style={styles.loginBtnText}>Masuk</Text>
+                </TouchableOpacity>
+              ) : (
+                <View style={styles.avatar}>
+                  <Text style={styles.avatarText}>A</Text>
+                </View>
+              )}
             </View>
 
-            {/* Search */}
             <View style={styles.searchWrap}>
               <View style={styles.searchBar}>
                 <Text style={styles.searchIcon}>🔍</Text>
@@ -74,7 +102,6 @@ export default function CatalogScreen() {
               </View>
             </View>
 
-            {/* Promo Banner */}
             <View style={styles.banner}>
               <View style={styles.bannerContent}>
                 <Text style={styles.bannerTitle}>Diskon 30%</Text>
@@ -86,7 +113,6 @@ export default function CatalogScreen() {
               <Text style={styles.bannerEmoji}>🍔</Text>
             </View>
 
-            {/* Categories */}
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.catRow}>
               {categories.map((cat, i) => (
                 <TouchableOpacity
@@ -99,28 +125,31 @@ export default function CatalogScreen() {
               ))}
             </ScrollView>
 
-            <Text style={styles.sectionTitle}>Populer Saat Ini</Text>
+            <Text style={styles.sectionTitle}>Restoran Terdekat</Text>
           </>
         }
         renderItem={({ item }) => (
-          <View style={styles.card}>
+          <TouchableOpacity 
+            style={styles.card}
+            onPress={() => handleRestaurantPress(item.id)}
+          >
             <Image source={{ uri: item.imageUrl }} style={styles.cardImage} />
             <View style={styles.cardBody}>
               <View style={styles.cardRow}>
                 <Text style={styles.cardName} numberOfLines={1}>{item.name}</Text>
                 <View style={styles.ratingBadge}>
-                  <Text style={styles.ratingText}>⭐ 4.8</Text>
+                  <Text style={styles.ratingText}>⭐ {item.rating}</Text>
                 </View>
               </View>
-              <Text style={styles.cardDesc} numberOfLines={2}>{item.description}</Text>
-              <View style={styles.cardFooter}>
-                <Text style={styles.cardPrice}>Rp {item.price?.toLocaleString()}</Text>
-                <TouchableOpacity style={styles.orderBtn}>
-                  <Text style={styles.orderBtnText}>+ Tambah</Text>
-                </TouchableOpacity>
-              </View>
+              <Text style={styles.distance}>📍 {item.distance}</Text>
+              <Text style={styles.cardDesc} numberOfLines={1}>{item.category}</Text>
+              {item.promotionalText && (
+                <View style={styles.promoBadge}>
+                  <Text style={styles.promoText} numberOfLines={1}>🎁 {item.promotionalText}</Text>
+                </View>
+              )}
             </View>
-          </View>
+          </TouchableOpacity>
         )}
       />
     </View>
@@ -130,7 +159,6 @@ export default function CatalogScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#fff' },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -150,7 +178,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   avatarText: { color: '#fff', fontWeight: 'bold', fontSize: 17 },
-
+  loginBtn: {
+    backgroundColor: '#2563eb',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 10,
+  },
+  loginBtnText: { color: '#fff', fontWeight: '600', fontSize: 13 },
   searchWrap: { paddingHorizontal: 20, marginTop: 14 },
   searchBar: {
     flexDirection: 'row',
@@ -163,7 +197,6 @@ const styles = StyleSheet.create({
   },
   searchIcon: { fontSize: 15, marginRight: 10 },
   searchInput: { flex: 1, paddingVertical: 14, fontSize: 14, color: '#1e293b' },
-
   banner: {
     marginHorizontal: 20,
     marginTop: 20,
@@ -187,7 +220,6 @@ const styles = StyleSheet.create({
   },
   bannerBtnText: { color: '#1e40af', fontWeight: '700', fontSize: 12 },
   bannerEmoji: { fontSize: 60, marginLeft: 10 },
-
   catRow: { paddingHorizontal: 20, paddingTop: 20, paddingBottom: 6 },
   catChip: {
     paddingHorizontal: 16,
@@ -199,14 +231,12 @@ const styles = StyleSheet.create({
   catChipActive: { backgroundColor: '#2563eb' },
   catText: { fontSize: 13, color: '#475569', fontWeight: '500' },
   catTextActive: { color: '#fff' },
-
   sectionTitle: { fontSize: 18, fontWeight: '700', color: '#0f172a', paddingHorizontal: 20, marginTop: 18, marginBottom: 12 },
-
   card: {
-    marginHorizontal: 20,
-    marginBottom: 18,
+    width: '48%',
+    marginBottom: 16,
     backgroundColor: '#fff',
-    borderRadius: 18,
+    borderRadius: 16,
     overflow: 'hidden',
     borderWidth: 1,
     borderColor: '#f1f5f9',
@@ -216,20 +246,20 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.06,
     shadowRadius: 12,
   },
-  cardImage: { width: '100%', height: 180, backgroundColor: '#e2e8f0' },
-  cardBody: { padding: 16 },
+  cardImage: { width: '100%', height: 120, backgroundColor: '#e2e8f0' },
+  cardBody: { padding: 12 },
   cardRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  cardName: { fontSize: 17, fontWeight: '700', color: '#0f172a', flex: 1 },
-  ratingBadge: { backgroundColor: '#fef3c7', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
-  ratingText: { fontSize: 12, fontWeight: '600', color: '#92400e' },
-  cardDesc: { fontSize: 13, color: '#64748b', marginTop: 6, lineHeight: 19 },
-  cardFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 14 },
-  cardPrice: { fontSize: 18, fontWeight: 'bold', color: '#2563eb' },
-  orderBtn: {
-    backgroundColor: '#2563eb',
-    paddingHorizontal: 18,
-    paddingVertical: 10,
-    borderRadius: 10,
+  cardName: { fontSize: 14, fontWeight: '700', color: '#0f172a', flex: 1, marginRight: 6 },
+  ratingBadge: { backgroundColor: '#fef3c7', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 },
+  ratingText: { fontSize: 10, fontWeight: '600', color: '#92400e' },
+  distance: { fontSize: 11, color: '#64748b', marginTop: 6 },
+  cardDesc: { fontSize: 11, color: '#64748b', marginTop: 4 },
+  promoBadge: {
+    backgroundColor: '#dcfce7',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    marginTop: 8,
   },
-  orderBtnText: { color: '#fff', fontWeight: '600', fontSize: 13 },
+  promoText: { fontSize: 10, color: '#166534', fontWeight: '500' },
 });
