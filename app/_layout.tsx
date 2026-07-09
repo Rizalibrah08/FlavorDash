@@ -14,15 +14,17 @@ function RootLayoutNav() {
   useEffect(() => {
     if (isLoading) return;
 
-    const inAuthGroup = segments[0] === '(tabs)';
     const inLogin = segments[0] === 'login';
+    const isProtectedRoute = segments.includes('restaurant-detail') || 
+                             segments.includes('orders') || 
+                             segments.includes('order-detail');
 
-    if (!token && !inLogin) {
+    if (!token && isProtectedRoute) {
       router.replace('/login');
     } else if (token && inLogin) {
       router.replace('/(tabs)');
     }
-  }, [token, isLoading, segments]);
+  }, [token, isLoading, segments, router]);
 
   if (isLoading) {
     return (
@@ -37,6 +39,7 @@ function RootLayoutNav() {
       <Stack>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="login" options={{ headerShown: false }} />
+        <Stack.Screen name="restaurant-detail" options={{ headerShown: false }} />
         <Stack.Screen name="order-detail" options={{ headerShown: false }} />
       </Stack>
       <StatusBar style="auto" />
