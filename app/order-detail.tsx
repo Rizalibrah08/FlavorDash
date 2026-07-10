@@ -3,11 +3,8 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState, useEffect } from 'react';
 import LeafletMap from '@/components/LeafletMap';
 import * as ImagePicker from 'expo-image-picker';
-import * as SecureStore from 'expo-secure-store';
-import axios from 'axios';
 import { Order, STATUS_CONFIG, ORDER_STEPS, getActiveStep, OrderStatus } from '@/constants/orders';
-
-const BACKEND_URL = 'http://192.168.1.7:3000';
+import { MOCK_ORDERS, RESTAURANT_LOCATIONS, USER_LOCATION } from '@/constants/mock-orders';
 
 export default function OrderDetailScreen() {
   const router = useRouter();
@@ -15,39 +12,27 @@ export default function OrderDetailScreen() {
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [userLocation, setUserLocation] = useState<{latitude: number; longitude: number} | null>(null);
+  const [userLocation] = useState(USER_LOCATION);
   const [restaurantLocation, setRestaurantLocation] = useState<{latitude: number; longitude: number} | null>(null);
   const [photoUri, setPhotoUri] = useState<string | null>(null);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
 
   useEffect(() => {
-    const fetchOrder = async () => {
-      try {
-        const token = await SecureStore.getItemAsync('token');
-        const res = await axios.get(`${BACKEND_URL}/orders/${id}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        setOrder(res.data);
-
-        if (res.data.restaurantId) {
-          const restRes = await axios.get(`${BACKEND_URL}/restaurants/${res.data.restaurantId}`);
-          if (restRes.data.latitude && restRes.data.longitude) {
-            setRestaurantLocation({ latitude: restRes.data.latitude, longitude: restRes.data.longitude });
-          }
-        }
-
-        const userRes = await axios.get(`${BACKEND_URL}/user/profile`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (userRes.data.latitude && userRes.data.longitude) {
-          setUserLocation({ latitude: userRes.data.latitude, longitude: userRes.data.longitude });
-        }
-      } catch {
-        setError('Gagal memuat detail pesanan');
-      } finally {
-        setLoading(false);
+    // Simulasi loading lalu ambil dari mock data
+    const timer = setTimeout(() => {
+      const found = MOCK_ORDERS.find(o => o.id === id);
+      if (found) {
+        setOrder(found);
+        const loc = RESTAURANT_LOCATIONS[found.restaurantId];
+        if (loc) setRestaurantLocation(loc);
+        // Jika order sudah punya photoUrl dari mock, tampilkan juga
+        if (found.photoUrl) setPhotoUri(found.photoUrl);
+      } else {
+        setError('Pesanan tidak ditemukan');
       }
-    };
-    fetchOrder();
+      setLoading(false);
+    }, 500);
+    return () => clearTimeout(timer);
   }, [id]);
 
   const handleTakePhoto = async () => {
@@ -58,7 +43,15 @@ export default function OrderDetailScreen() {
     }
     const result = await ImagePicker.launchCameraAsync({ mediaTypes: ['images'], quality: 0.7 });
     if (!result.canceled && result.assets[0]) {
-      setPhotoUri(result.assets[0].uri);
+      const uri = result.assets[0].uri;
+      setUploadingPhoto(true);
+      // Simulasi upload 1 detik lalu simpan lokal
+      setTimeout(() => {
+        setPhotoUri(uri);
+        setOrder(prev => prev ? { ...prev, photoUrl: uri } : prev);
+        setUploadingPhoto(false);
+        Alert.alert('Sukses', 'Foto bukti penerimaan berhasil disimpan!');
+      }, 1000);
     }
   };
 
@@ -218,14 +211,14 @@ export default function OrderDetailScreen() {
 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Bukti Penerimaan</Text>
-        <TouchableOpacity style={styles.cameraButton} onPress={handleTakePhoto}>
+        <TouchableOpacity style={[styles.cameraButton, uploadingPhoto && {opacity: 0.6}]} onPress={handleTakePhoto} disabled={uploadingPhoto}>
           <Text style={styles.cameraButtonIcon}>📷</Text>
-          <Text style={styles.cameraButtonText}>Ambil Foto Bukti</Text>
+          <Text style={styles.cameraButtonText}>{uploadingPhoto ? 'Mengunggah...' : 'Ambil Foto Bukti'}</Text>
         </TouchableOpacity>
-        {photoUri && (
+        {(photoUri || order?.photoUrl) && (
           <View style={styles.photoPreview}>
             <Text style={styles.photoLabel}>Foto Bukti:</Text>
-            <Image source={{ uri: photoUri }} style={styles.photoImage} resizeMode="cover" />
+            <Image source={{ uri: photoUri || order.photoUrl }} style={styles.photoImage} resizeMode="cover" />
           </View>
         )}
       </View>

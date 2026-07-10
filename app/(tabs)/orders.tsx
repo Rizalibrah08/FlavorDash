@@ -1,63 +1,41 @@
-import { useEffect, useState } from 'react';
+import { useState, useCallback } from 'react';
 import {
   View, Text, FlatList, StyleSheet, ActivityIndicator,
   TouchableOpacity, StatusBar,
 } from 'react-native';
-import { useRouter } from 'expo-router';
-import { useAuth } from '@/context/auth-context';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { Order, STATUS_CONFIG, OrderStatus } from '@/constants/orders';
-
-const BACKEND_URL = 'http://192.168.1.7:3000';
+import { MOCK_ORDERS } from '@/constants/mock-orders';
 
 export default function OrdersScreen() {
-  const { token } = useAuth();
   const router = useRouter();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
   const [activeTab, setActiveTab] = useState('all');
   const [refreshing, setRefreshing] = useState(false);
 
   const fetchOrders = () => {
-    if (!token) {
+    // Simulasi loading sebentar lalu tampilkan mock data
+    setTimeout(() => {
+      setOrders([...MOCK_ORDERS]);
       setLoading(false);
-      return;
-    }
-    fetch(`${BACKEND_URL}/orders`, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-      .then(async res => {
-        const text = await res.text();
-        console.log('Orders response:', res.status, text);
-        if (!res.ok) {
-          const data = JSON.parse(text);
-          throw new Error(data.message || 'Failed');
-        }
-        return JSON.parse(text);
-      })
-      .then(data => setOrders(Array.isArray(data) ? data : []))
-      .catch(err => {
-        console.log('Orders error:', err.message);
-        setError(`Gagal memuat pesanan: ${err.message}`);
-      })
-      .finally(() => {
-        setLoading(false);
-        setRefreshing(false);
-      });
+      setRefreshing(false);
+    }, 600);
   };
 
-  useEffect(() => {
-    fetchOrders();
-  }, [token]);
+  useFocusEffect(
+    useCallback(() => {
+      setLoading(true);
+      fetchOrders();
+    }, [])
+  );
 
   const onRefresh = () => {
     setRefreshing(true);
-    setError('');
     fetchOrders();
   };
 
   if (loading) return <View style={styles.center}><ActivityIndicator size="large" color="#2563eb" /></View>;
-  if (error) return <View style={styles.center}><Text style={{ color: '#dc2626' }}>{error}</Text></View>;
 
   const filteredOrders = activeTab === 'all'
     ? orders

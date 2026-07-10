@@ -1,62 +1,99 @@
 # FlavorDash 🍽️
 
-Aplikasi katalog makanan mobile yang dikembangkan menggunakan React Native + Expo Router. Aplikasi ini mengimplementasikan **layout responsif Flexbox**, **autentikasi Stateless (JWT)**, dan **proteksi rute (Middleware)** untuk halaman Detail Pesanan.
+## Summary
 
-## Fitur Utama
-
-### 1. Katalog Makanan (Layout Responsif)
-- Menampilkan daftar makanan dari MockAPI.io
-- Layout menggunakan **Flexbox** (`flexDirection: 'row'`) dengan unit proporsional (`flex: 1`, `flex: 2`)
-- Gambar dan deskripsi ditampilkan sejajar tanpa terpotong di berbagai ukuran layar
-- Komponen: `<View>`, `<Text>`, `<Image>`, `<FlatList>`
-
-### 2. Autentikasi Stateless (JWT)
-- Sistem login menggunakan **JSON Web Token** tanpa penyimpanan sesi di server
-- Backend Express.js memvalidasi kredensial dan mengembalikan JWT
-- Token terdiri dari: **Header** (algoritma), **Payload** (data user + expiry), **Signature** (validasi integritas)
-- Token disimpan di **SecureStore** pada device
-
-### 3. Proteksi Halaman (Middleware)
-- Halaman "Detail Pesanan" hanya bisa diakses oleh pengguna yang sudah login
-- Middleware pada `app/_layout.tsx` menggunakan `useSegments()` dan `useRouter()` dari Expo Router
-- Jika token tidak valid/kosong → redirect otomatis ke halaman Login
+FlavorDash adalah aplikasi mobile pemesanan makanan yang dikembangkan menggunakan **React Native + Expo Router**. Pengguna dapat menjelajahi katalog restoran, melihat menu, melakukan checkout, dan memantau status pesanan secara real-time. Aplikasi ini mengimplementasikan autentikasi berbasis **JWT (Stateless)**, proteksi rute (Middleware), layout responsif **Flexbox**, serta fitur tambahan seperti upload foto bukti penerimaan dan akses lokasi pengguna.
 
 ---
 
-## Workflow Sistem
+## Bahasa Pemrograman
 
-### Alur 1: Rendering Katalog Makanan
-```
-User membuka app → Middleware cek token → Token valid → Tampilkan Katalog
-  → App fetch GET ke MockAPI.io/foods
-  → Data diterima (array JSON)
-  → FlatList merender setiap item dengan Flexbox (row layout)
-  → Gambar (flex:1) | Deskripsi + Harga (flex:2)
-  → Tampilan proporsional di semua ukuran layar
-```
+| Layer | Bahasa |
+|-------|--------|
+| Mobile (Frontend) | **TypeScript** (React Native + Expo) |
+| Backend (Server) | **JavaScript** (Node.js + Express) |
 
-### Alur 2: Autentikasi & Proteksi Rute
-```
-User buka app → Middleware cek token di SecureStore
-  → Token TIDAK ADA → Redirect ke /login
-  → User input username & password → Submit
-  → App kirim POST /auth/login ke backend Express
-  → Backend validasi kredensial
-  → Backend generate JWT (Header.Payload.Signature, expiry 1 jam)
-  → App terima token → Simpan di SecureStore
-  → Middleware detect token → Redirect ke /(tabs)
+---
 
-User navigasi ke "Detail Pesanan"
-  → Middleware cek token → Token VALID → Izinkan akses
-  → App fetch data pesanan dari MockAPI.io dengan header Authorization
-  → Tampilkan halaman Detail Pesanan
-```
+## Stack Teknologi
 
-### Alur 3: Logout
+### 📱 Mobile — React Native (Expo)
+
+| Komponen | Teknologi |
+|----------|-----------|
+| Framework | React Native 0.86 |
+| Bahasa | TypeScript |
+| Routing | Expo Router v57 (file-based) |
+| HTTP Client | Axios |
+| Token Storage | expo-secure-store |
+| Lokasi | expo-location |
+| Kamera / Foto | expo-image-picker |
+| Animasi | react-native-reanimated |
+
+### 🖥️ Backend — Node.js + Express
+
+| Komponen | Teknologi |
+|----------|-----------|
+| Runtime | Node.js |
+| Framework | Express.js |
+| Autentikasi | JSON Web Token (JWT) — `jsonwebtoken` |
+| Upload File | Multer (multipart/form-data) |
+| CORS | cors |
+
+### 🗄️ Database / API
+
+| Sumber Data | Keterangan |
+|-------------|------------|
+| **Backend lokal (Express)** | Menyimpan data **orders** ke file `orders.json` (JSON file-based persistence). Data **restaurants** di-hardcode di `server.js`. |
+| **MockAPI.io** *(opsional)* | Sebelumnya digunakan sebagai API eksternal untuk data `foods` dan `orders`. Saat ini digantikan oleh backend Express lokal. |
+
+> **Catatan:** Proyek ini **tidak menggunakan AI Recommendation API (OpenAI atau sejenisnya)**. Rekomendasi / filter restoran dilakukan secara lokal melalui query parameter ke endpoint `/restaurants?category=...&search=...` di backend Express.
+
+---
+
+## Flow Aplikasi (Garis Besar)
+
 ```
-User tap "Keluar" → Token dihapus dari SecureStore
-  → State token = null → Middleware detect
-  → Redirect ke /login
+┌─────────────────────────────────────────────────────────────────┐
+│                        FLOW UTAMA                               │
+└─────────────────────────────────────────────────────────────────┘
+
+1. BUKA APLIKASI
+   └─► Middleware (_layout.tsx) cek token di SecureStore
+         ├─ Token TIDAK ADA / tidak valid → redirect ke /login
+         └─ Token VALID → lanjut ke /(tabs) (halaman utama)
+
+2. LOGIN
+   └─► User input username & password → submit
+         └─► POST /auth/login ke backend Express (port 3000)
+               ├─ Kredensial salah → tampil pesan error
+               └─ Kredensial benar → backend generate JWT (7 hari)
+                     └─► Token disimpan di SecureStore
+                           └─► Redirect ke /(tabs)/index (Katalog)
+
+3. KATALOG RESTORAN (Home)
+   └─► GET /restaurants (dengan filter opsional: category, search)
+         └─► Data restoran ditampilkan dengan FlatList + Flexbox layout
+               └─► User pilih restoran → navigasi ke halaman detail restoran
+                     └─► GET /restaurants/:id
+
+4. CHECKOUT
+   └─► User tambah item ke keranjang → tap Checkout
+         └─► POST /orders (dengan Authorization: Bearer <token>)
+               └─► Backend simpan order ke orders.json
+                     └─► Redirect ke halaman Pesanan (Orders)
+
+5. RIWAYAT PESANAN
+   └─► GET /orders (dengan Authorization: Bearer <token>)
+         └─► Tampilkan daftar pesanan milik user yang sedang login
+               └─► User tap pesanan → GET /orders/:id
+                     └─► Halaman Detail Pesanan
+                           └─► (Opsional) Upload foto → POST /orders/:id/photo
+
+6. PROFIL & LOGOUT
+   └─► GET /user/profile → tampilkan data user + lokasi
+         └─► User tap "Keluar" → token dihapus dari SecureStore
+               └─► Middleware detect token null → redirect ke /login
 ```
 
 ---
@@ -68,33 +105,23 @@ FlavorDash/
 ├── app/
 │   ├── _layout.tsx           # Root layout + Auth Middleware
 │   ├── login.tsx             # Halaman Login
-│   ├── order-detail.tsx      # Halaman Detail Pesanan Individual
+│   ├── checkout.tsx          # Halaman Checkout
+│   ├── order-detail.tsx      # Halaman Detail Pesanan (Protected)
 │   └── (tabs)/
 │       ├── _layout.tsx       # Tab Navigator
-│       ├── index.tsx         # Katalog Makanan (Flexbox responsif)
-│       └── orders.tsx        # Daftar Pesanan (Protected)
+│       ├── index.tsx         # Katalog Restoran (Flexbox responsif)
+│       ├── orders.tsx        # Daftar Pesanan (Protected)
+│       └── profile.tsx       # Halaman Profil
 ├── context/
 │   └── auth-context.tsx      # Auth Provider + useAuth hook
+├── constants/
+│   └── config.ts             # Konfigurasi API_URL
 ├── backend/
-│   ├── server.js             # Express + JWT Authentication
+│   ├── server.js             # Express + JWT + Orders API
+│   ├── orders.json           # Persistent storage pesanan
 │   └── package.json          # Dependencies backend
 └── README.md
 ```
-
----
-
-## Teknologi
-
-| Komponen | Teknologi |
-|----------|-----------|
-| Framework | React Native |
-| Routing | Expo Router (file-based) |
-| Backend | Node.js + Express |
-| Autentikasi | JSON Web Token (JWT) |
-| Token Storage | expo-secure-store |
-| HTTP Client | Axios |
-| Data API | MockAPI.io |
-| Repository | Git |
 
 ---
 
@@ -109,7 +136,6 @@ FlavorDash/
 ### Langkah 1: Clone & Install Dependencies
 
 ```bash
-# Clone repository
 git clone https://github.com/Rizalibrah08/FlavorDash.git
 cd FlavorDash
 
@@ -122,23 +148,7 @@ npm install
 cd ..
 ```
 
-### Langkah 2: Setup MockAPI.io
-
-1. Buka [mockapi.io](https://mockapi.io) dan buat project baru
-2. Buat resource **`foods`** dengan fields:
-   - `name` (String)
-   - `description` (String)
-   - `imageUrl` (String / Image URL)
-   - `price` (Number)
-3. Buat resource **`orders`** dengan fields:
-   - `itemName` (String)
-   - `quantity` (Number)
-   - `status` (String: "pending" / "delivered" / "cancelled")
-   - `total` (Number)
-4. Generate sample data (5-10 item per resource)
-5. Update URL di `app/(tabs)/index.tsx` dan `app/(tabs)/orders.tsx` dengan URL project MockAPI.io Anda
-
-### Langkah 3: Konfigurasi IP Address
+### Langkah 2: Konfigurasi IP Address
 
 1. Cari IP komputer Anda:
    ```bash
@@ -146,12 +156,12 @@ cd ..
    ```
    Catat IPv4 Address (contoh: `192.168.1.6`)
 
-2. Update `context/auth-context.tsx`:
+2. Update `constants/config.ts`:
    ```typescript
-   const API_URL = 'http://<IP_ANDA>:3000';
+   export const API_URL = 'http://<IP_ANDA>:3000';
    ```
 
-### Langkah 4: Jalankan Backend
+### Langkah 3: Jalankan Backend
 
 ```bash
 cd backend
@@ -159,7 +169,7 @@ node server.js
 ```
 Output: `FlavorDash backend running on http://localhost:3000`
 
-### Langkah 5: Jalankan Aplikasi Mobile
+### Langkah 4: Jalankan Aplikasi Mobile
 
 ```bash
 # Di terminal baru (dari root folder FlavorDash)
@@ -168,7 +178,7 @@ npx expo start
 
 Scan QR code dengan Expo Go di HP Android.
 
-### Langkah 6: Login
+### Langkah 5: Login
 
 ```
 Username: admin
@@ -180,18 +190,12 @@ Password: password123
 ## Analisis Keamanan: Stateful vs Stateless
 
 | Aspek | Stateful (Session) | Stateless (JWT) |
-|-------|-------------------|-----------------|
+|-------|-------------------|-----------------| 
 | Penyimpanan | Server (RAM/DB) | Client (device) |
 | Skalabilitas | Terbatas | Tinggi |
 | Beban Server | Berat (jutaan session) | Ringan (0 byte per user) |
 | Horizontal Scaling | Butuh shared session store | Langsung bisa |
 | Mobile Friendly | Kurang (cookie-based) | Sangat cocok (header-based) |
-
-**Mengapa Stateless lebih efisien untuk jutaan pengguna:**
-1. Server tidak menyimpan data session → hemat memori
-2. Setiap server bisa verify token secara independen → mudah di-scale
-3. Tidak ada dependency ke external session store → performa lebih cepat
-4. Token dikirim via Authorization header → natural untuk REST API mobile
 
 ---
 
@@ -201,5 +205,5 @@ Password: password123
 |-------|-------|
 | Username | `admin` |
 | Password | `password123` |
-| JWT Expiry | 1 jam |
+| JWT Expiry | 7 hari |
 | Backend Port | 3000 |

@@ -6,7 +6,7 @@ import { useAuth } from '@/context/auth-context';
 import * as SecureStore from 'expo-secure-store';
 import axios from 'axios';
 
-const BACKEND_URL = 'http://192.168.1.7:3000';
+import { API_URL as BACKEND_URL } from '@/constants/config';
 
 export default function CheckoutScreen() {
   const router = useRouter();

@@ -6,7 +6,7 @@ import {
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCart } from '@/context/cart-context';
 
-const BACKEND_URL = 'http://192.168.1.7:3000';
+import { API_URL as BACKEND_URL } from '@/constants/config';
 const MOCKAPI_URL = 'https://6a032dc50d92f63dd255159e.mockapi.io/foods';
 
 type Restaurant = {

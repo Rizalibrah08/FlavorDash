@@ -3,7 +3,23 @@ const jwt = require('jsonwebtoken');
 const cors = require('cors');
 const fs = require('fs');
 const path = require('path');
+const multer = require('multer');
 
+const UPLOADS_DIR = path.join(__dirname, 'uploads');
+if (!fs.existsSync(UPLOADS_DIR)) {
+  fs.mkdirSync(UPLOADS_DIR);
+}
+
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, UPLOADS_DIR);
+  },
+  filename: function (req, file, cb) {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
+  }
+});
+const upload = multer({ storage: storage });
 const app = express();
 const SECRET = 'flavordash-secret-key-2024';
 const PORT = 3000;
@@ -11,6 +27,7 @@ const ORDERS_FILE = path.join(__dirname, 'orders.json');
 
 app.use(cors());
 app.use(express.json());
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 function authMiddleware(req, res, next) {
   const authHeader = req.headers.authorization;
@@ -145,7 +162,7 @@ app.post('/auth/login', (req, res) => {
     return res.status(401).json({ message: 'Username atau password salah' });
   }
 
-  const token = jwt.sign({ userId: user.id, username: user.username }, SECRET, { expiresIn: '1h' });
+  const token = jwt.sign({ userId: user.id, username: user.username }, SECRET, { expiresIn: '7d' });
   res.json({ token, username: user.username });
 });
 
@@ -264,14 +281,16 @@ app.get('/orders', authMiddleware, (req, res) => {
 
 // GET /orders/:id
 app.get('/orders/:id', authMiddleware, (req, res) => {
-  const order = ORDERS.find(o => o.id === req.params.id && o.userId === req.user.userId);
+  const userId = Number(req.user.userId);
+  const order = ORDERS.find(o => o.id === req.params.id && Number(o.userId) === userId);
   if (!order) return res.status(404).json({ message: 'Pesanan tidak ditemukan' });
   res.json(order);
 });
 
 // PATCH /orders/:id/status
 app.patch('/orders/:id/status', authMiddleware, (req, res) => {
-  const order = ORDERS.find(o => o.id === req.params.id && o.userId === req.user.userId);
+  const userId = Number(req.user.userId);
+  const order = ORDERS.find(o => o.id === req.params.id && Number(o.userId) === userId);
   if (!order) return res.status(404).json({ message: 'Pesanan tidak ditemukan' });
 
   const { status } = req.body;
@@ -283,6 +302,26 @@ app.patch('/orders/:id/status', authMiddleware, (req, res) => {
   order.status = status;
   saveOrders();
   res.json(order);
+});
+
+// POST /orders/:id/photo
+app.post('/orders/:id/photo', authMiddleware, upload.single('photo'), (req, res) => {
+  const userId = Number(req.user.userId);
+  const order = ORDERS.find(o => o.id === req.params.id && Number(o.userId) === userId);
+  if (!order) return res.status(404).json({ message: 'Pesanan tidak ditemukan' });
+
+  if (!req.file) {
+    return res.status(400).json({ message: 'Tidak ada file yang diunggah' });
+  }
+
+  const host = req.get('host');
+  const protocol = req.protocol;
+  const photoUrl = `${protocol}://${host}/uploads/${req.file.filename}`;
+  
+  order.photoUrl = photoUrl;
+  saveOrders();
+  
+  res.json({ message: 'Foto berhasil diunggah', photoUrl });
 });
 
 app.listen(PORT, () => console.log(`FlavorDash backend running on http://localhost:${PORT}`));

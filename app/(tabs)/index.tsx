@@ -6,7 +6,7 @@ import {
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/context/auth-context';
 
-const BACKEND_URL = 'http://192.168.1.7:3000';
+import { API_URL as BACKEND_URL } from '@/constants/config';
 
 type Restaurant = {
   id: string;

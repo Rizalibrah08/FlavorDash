@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useState, ReactNode } from 'react
 import * as SecureStore from 'expo-secure-store';
 import axios from 'axios';
 
-const API_URL = 'http://192.168.1.7:3000';
+import { API_URL } from '@/constants/config';
 
 type AuthContextType = {
   token: string | null;

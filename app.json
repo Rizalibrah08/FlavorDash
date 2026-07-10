@@ -44,7 +44,14 @@
       "expo-image",
       "expo-status-bar",
       "expo-web-browser",
-      "expo-location"
+      "expo-location",
+      [
+        "expo-image-picker",
+        {
+          "cameraPermission": "Allow FlavorDash to access your camera to take delivery proof photos",
+          "photosPermission": "Allow FlavorDash to access your photos"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

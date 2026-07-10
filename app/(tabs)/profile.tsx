@@ -5,7 +5,7 @@ import * as Location from 'expo-location';
 import axios from 'axios';
 import { useAuth } from '@/context/auth-context';
 
-const API_URL = 'http://192.168.1.7:3000';
+import { API_URL } from '@/constants/config';
 
 type UserProfile = {
   id: number;

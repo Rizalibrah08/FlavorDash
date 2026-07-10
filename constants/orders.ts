@@ -36,6 +36,7 @@ export type Order = {
   deliveryAddress: string;
   paymentMethod: string;
   createdAt: string;
+  photoUrl?: string;
 };
 
 export function getActiveStep(status: OrderStatus): number {
